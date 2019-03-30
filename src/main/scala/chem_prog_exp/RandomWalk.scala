@@ -8,14 +8,16 @@ import scala.scalajs.js.annotation._
 
 @JSExportTopLevel("RandomWalk")
 object RandomWalk {
+
+  private val boxSize = 1.0
+  private val steps = 5000
+  private val cycleDuration = 5
+
+  private val halfBoxSize = boxSize / 2
+
   @JSExport
   def run(): Unit = {
     println("loaded")
-
-    val v = THREE.Vector3(0, 1, 2)
-    println(v.x + "," + v.y + "," + v.z)
-    v.add(THREE.Vector3(1, 2, 3))
-    println(v.x + "," + v.y + "," + v.z)
 
     val scene = THREE.Scene()
 
@@ -26,8 +28,19 @@ object RandomWalk {
 
     val renderer = THREE.WebGLRenderer()
     renderer.setSize(500, 500)
-
     dom.document.getElementById("render").appendChild(renderer.domElement)
 
+    val cube = THREE.LineSegments(
+      THREE.EdgesGeometry(THREE.BoxGeometry(boxSize, boxSize, boxSize)),
+      THREE.LineBasicMaterial(js.Dynamic.literal(color = 0x00ff00))
+    )
+    scene.add(cube)
+
+    def animate(): Unit = {
+      js.Dynamic.global.requestAnimationFrame(() => animate())
+      renderer.render(scene, camera)
+    }
+
+    animate()
   }
 }

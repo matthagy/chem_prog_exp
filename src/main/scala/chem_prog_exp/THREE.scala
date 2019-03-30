@@ -74,4 +74,50 @@ object THREE {
       js.Dynamic.newInstance(js.Dynamic.global.THREE.WebGLRenderer)().asInstanceOf[WebGLRenderer]
   }
 
+  @js.native
+  trait Geometry extends js.Object
+
+  @js.native
+  trait BoxGeometry extends Geometry
+
+  object BoxGeometry {
+    def apply(x:js.JSNumberOps, y:js.JSNumberOps, z:js.JSNumberOps): BoxGeometry =
+      js.Dynamic.newInstance(js.Dynamic.global.THREE.BoxGeometry)(
+        x, y, z
+      ).asInstanceOf[BoxGeometry]
+  }
+
+  @js.native
+  trait EdgesGeometry extends Geometry
+
+  object EdgesGeometry {
+    def apply(geometry: Geometry): EdgesGeometry =
+      js.Dynamic.newInstance(js.Dynamic.global.THREE.EdgesGeometry)(
+        geometry
+      ).asInstanceOf[EdgesGeometry]
+  }
+
+
+  @js.native
+  trait Material extends js.Object
+
+  @js.native
+  trait LineBasicMaterial extends Material
+
+  object LineBasicMaterial {
+    def apply(attrs: js.Object): LineBasicMaterial =
+      js.Dynamic.newInstance(js.Dynamic.global.THREE.LineBasicMaterial)(
+        attrs
+      ).asInstanceOf[LineBasicMaterial]
+  }
+
+  @js.native
+  trait LineSegments extends SceneObject
+
+  object LineSegments {
+    def apply(geometry: Geometry, material: Material): LineSegments =
+      js.Dynamic.newInstance(js.Dynamic.global.THREE.LineSegments)(
+        geometry, material
+      ).asInstanceOf[LineSegments]
+  }
 }
