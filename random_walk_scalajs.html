@@ -31,7 +31,7 @@
     <h2>Random Walk in a Periodic Box</h2>
     <div id="info">Info</div>
     <div id="plot"></div>
-
+    <div id="render"></div>
 
 <script type="text/javascript" src="js/three.min.js"></script>
 <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
@@ -46,6 +46,10 @@
         crossorigin="anonymous"></script>
 
 <script type="text/javascript" src="target/scala-2.12/chem_prog_exp-opt.js"></script>
+
+<script>
+    window.onload = function() { RandomWalk.run(); }
+</script>
 
 </body>
 </html>

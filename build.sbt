@@ -8,4 +8,5 @@ libraryDependencies += "org.scala-js" %%% "scalajs-dom" % "0.9.5"
 
 libraryDependencies += "com.lihaoyi" %%% "scalatags" % "0.6.7"
 
-scalaJSUseMainModuleInitializer := true
+scalaJSUseMainModuleInitializer := false
+
