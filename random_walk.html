@@ -45,11 +45,13 @@
         integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
 
-<script type="text/javascript" src="target/scala-2.12/chem_md_exp-opt.js"></script>
-
 <script>
-    window.onload = function() {    
+    window.onload = function() { 
 
+        var boxSize = 1.0;
+        var steps=5000;  
+        var cycleDuration = 5;
+   
         var scene = new THREE.Scene();
         var camera = new THREE.PerspectiveCamera( 100, 1.2, 0.5, 10 );
         camera.position.z = 1.5;
@@ -60,7 +62,6 @@
         renderer.setSize(500, 500);
         document.body.appendChild( renderer.domElement );
 
-        var boxSize = 1.0;
         var halfBoxSize = boxSize / 2;
         var geometry = new THREE.BoxGeometry( boxSize, boxSize, boxSize);
         //var material = new THREE.MeshBasicMaterial(
@@ -76,7 +77,6 @@
         //cube.rotation.x = 3.14/16;
         cube.position = new THREE.Vector3(-halfBoxSize, -halfBoxSize, -halfBoxSize);
 
-        var N=50000;        
         var zeroVector = new THREE.Vector3(0, 0, 0)
         var truePosition = zeroVector.clone();
         var periodicPosition = zeroVector.clone();
@@ -103,8 +103,8 @@
             return line;
         }
 
-        var perioidLine = createLineGeo(N, 0x0000ff);
-        var trueLine = createLineGeo(N, 0xffff00);
+        var perioidLine = createLineGeo(steps, 0x0000ff);
+        var trueLine = createLineGeo(steps, 0xffff00);
         var deltaLine = createLineGeo(2, 0xff0000);
 
         function randomOffset() {
@@ -175,11 +175,11 @@
             renderer.render( scene, camera );
 
             index ++;
-            if (index >= N) {
+            if (index >= steps) {
                 return;
             }
 
-            for (var i=0; i<3; i++) {
+            for (var i=0; i<cycleDuration; i++) {
                 var delta = randomVector();
                 truePosition.add(delta);
 
