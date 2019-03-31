@@ -4,7 +4,6 @@ import scala.scalajs.js
 import org.scalajs.dom.raw.Node
 
 // Wrapper around the Javascript library THREE
-// Inspired by https://github.com/totekp/threejs-scalajs-example/blob/master/src/main/scala/user/totekp/threejs/THREE.scala
 object THREE {
 
   @js.native
@@ -46,11 +45,13 @@ object THREE {
   }
 
   @js.native
-  trait Camera extends js.Object
+  trait Camera extends js.Object {
+    val target: Vector3
+  }
 
   @js.native
   trait PerspectiveCamera extends Camera {
-    var position: Vector3
+    val position: Vector3
   }
 
   object PerspectiveCamera {
@@ -85,7 +86,7 @@ object THREE {
   trait BoxGeometry extends Geometry
 
   object BoxGeometry {
-    def apply(x: js.JSNumberOps, y: js.JSNumberOps, z: js.JSNumberOps): BoxGeometry =
+    def apply(x: Double, y: Double, z: Double): BoxGeometry =
       js.Dynamic.newInstance(js.Dynamic.global.THREE.BoxGeometry)(
         x, y, z
       ).asInstanceOf[BoxGeometry]
@@ -101,6 +102,19 @@ object THREE {
       ).asInstanceOf[EdgesGeometry]
   }
 
+  @js.native
+  trait SphereGeometry extends Geometry
+
+  object SphereGeometry {
+    def apply(radius: Double, widthSegments: Int, heightSegments: Int): SphereGeometry = {
+      assert(radius > 0)
+      assert(widthSegments > 0)
+      assert(heightSegments > 0)
+      js.Dynamic.newInstance(js.Dynamic.global.THREE.SphereGeometry)(
+        radius, widthSegments, heightSegments
+      ).asInstanceOf[SphereGeometry]
+    }
+  }
 
   @js.native
   trait Material extends js.Object
@@ -116,6 +130,16 @@ object THREE {
   }
 
   @js.native
+  trait MeshBasicMaterial extends Material
+
+  object MeshBasicMaterial {
+    def apply(attrs: js.Object): MeshBasicMaterial =
+      js.Dynamic.newInstance(js.Dynamic.global.THREE.MeshBasicMaterial)(
+        attrs
+      ).asInstanceOf[MeshBasicMaterial]
+  }
+
+  @js.native
   trait LineSegments extends SceneObject
 
   object LineSegments {
@@ -123,6 +147,16 @@ object THREE {
       js.Dynamic.newInstance(js.Dynamic.global.THREE.LineSegments)(
         geometry, material
       ).asInstanceOf[LineSegments]
+  }
+
+  @js.native
+  trait Mesh extends SceneObject
+
+  object Mesh {
+    def apply(geometry: Geometry, material: Material): Mesh =
+      js.Dynamic.newInstance(js.Dynamic.global.THREE.Mesh)(
+        geometry, material
+      ).asInstanceOf[Mesh]
   }
 
 }
