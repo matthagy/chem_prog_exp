@@ -162,8 +162,43 @@
           }
         };
 
+        var layout = {
+          height: 300,
+          title: {
+            text:'Root Mean Sqaure Displacement of Tracer',
+            font: {
+              family: 'Courier New, monospace',
+              size: 24
+            },
+            xref: 'paper',
+            x: 0.05,
+          },
+          xaxis: {
+            title: {
+              text: 'Time, t (steps)',
+              font: {
+                family: 'Courier New, monospace',
+                size: 18,
+                color: '#7f7f7f'
+              }
+            },
+          },
+          yaxis: {
+            title: {
+              text: 'RMS Displacement',
+              font: {
+                family: 'Courier New, monospace',
+                size: 18,
+                color: '#7f7f7f'
+              }
+            }
+          }
+        };
+
         function plot() {
-            Plotly.newPlot('plot', [tracePoints, traceLine], {height: 300}, {showSendToCloud: false});
+            Plotly.newPlot('plot', [tracePoints, traceLine],
+                layout,
+                {showSendToCloud: false});
         }
         plot();
 
