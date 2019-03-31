@@ -15,6 +15,8 @@ object THREE {
     def copy(v: Vector3): Unit
 
     def add(v: Vector3): Unit
+
+    def length(): Double
   }
 
   object Vector3 {
