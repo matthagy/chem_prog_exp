@@ -104,7 +104,7 @@ object RandomWalk {
     */
   private def createSimulationCube = {
     val cube = THREE.LineSegments(
-      THREE.EdgesGeometry(THREE.BoxGeometry(boxSize, boxSize, boxSize)),
+      THREE.EdgesGeometry(THREE.BoxGeometry(boxSize)),
       THREE.LineBasicMaterial(literal(color = 0x00ff00)))
     cube.position.copy(zeroVector)
     cube

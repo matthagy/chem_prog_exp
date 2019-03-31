@@ -102,6 +102,10 @@ object THREE {
         x, y, z
       ).asInstanceOf[BoxGeometry]
     }
+
+    def apply(size: Double): BoxGeometry = {
+      apply(size, size, size)
+    }
   }
 
   @js.native
