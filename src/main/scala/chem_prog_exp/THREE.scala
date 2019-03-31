@@ -3,7 +3,9 @@ package chem_prog_exp
 import scala.scalajs.js
 import org.scalajs.dom.raw.Node
 
-// Wrapper around the Javascript library THREE
+
+/** Partial wrapper around the Javascript library THREE
+  */
 object THREE {
 
   @js.native
@@ -77,7 +79,7 @@ object THREE {
   }
 
   @js.native
-  trait Geometry extends js.Object{
+  trait Geometry extends js.Object {
     val vertices: js.Array[Vector3]
     var verticesNeedUpdate: Boolean
   }
