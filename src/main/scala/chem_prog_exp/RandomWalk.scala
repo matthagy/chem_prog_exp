@@ -34,6 +34,7 @@ object RandomWalk {
       THREE.EdgesGeometry(THREE.BoxGeometry(boxSize, boxSize, boxSize)),
       THREE.LineBasicMaterial(js.Dynamic.literal(color = 0x00ff00))
     )
+    cube.position.copy(THREE.Vector3(-halfBoxSize))
     scene.add(cube)
 
     def animate(): Unit = {

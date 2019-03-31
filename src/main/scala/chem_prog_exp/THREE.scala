@@ -12,7 +12,7 @@ object THREE {
     var x: js.JSNumberOps
     var y: js.JSNumberOps
     var z: js.JSNumberOps
-    
+
     def copy(v: Vector3): Unit
 
     def add(v: Vector3): Unit
@@ -22,6 +22,8 @@ object THREE {
     def apply(x: js.JSNumberOps, y: js.JSNumberOps, z: js.JSNumberOps): Vector3 =
       js.Dynamic.newInstance(js.Dynamic.global.THREE.Vector3)(x, y, z).asInstanceOf[Vector3]
 
+    def apply(x: js.JSNumberOps): Vector3 = apply(x, x, x)
+
     def unapply(v: Vector3): Option[(js.JSNumberOps, js.JSNumberOps, js.JSNumberOps)] =
       Some((v.x, v.y, v.z))
 
@@ -29,7 +31,9 @@ object THREE {
   }
 
   @js.native
-  trait SceneObject extends js.Object
+  trait SceneObject extends js.Object {
+    var position: Vector3
+  }
 
   @js.native
   trait Scene extends js.Object {
@@ -46,7 +50,7 @@ object THREE {
 
   @js.native
   trait PerspectiveCamera extends Camera {
-    val position: Vector3
+    var position: Vector3
   }
 
   object PerspectiveCamera {
@@ -81,7 +85,7 @@ object THREE {
   trait BoxGeometry extends Geometry
 
   object BoxGeometry {
-    def apply(x:js.JSNumberOps, y:js.JSNumberOps, z:js.JSNumberOps): BoxGeometry =
+    def apply(x: js.JSNumberOps, y: js.JSNumberOps, z: js.JSNumberOps): BoxGeometry =
       js.Dynamic.newInstance(js.Dynamic.global.THREE.BoxGeometry)(
         x, y, z
       ).asInstanceOf[BoxGeometry]
@@ -120,4 +124,5 @@ object THREE {
         geometry, material
       ).asInstanceOf[LineSegments]
   }
+
 }
