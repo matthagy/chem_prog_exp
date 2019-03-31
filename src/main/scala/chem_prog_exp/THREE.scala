@@ -10,9 +10,10 @@ object THREE {
 
   @js.native
   trait Vector3 extends js.Object {
-    var x: Double
-    var y: Double
-    var z: Double
+    // technically, these could be `var`s but I like immutable data
+    val x: Double
+    val y: Double
+    val z: Double
 
     def copy(v: Vector3): Unit
 

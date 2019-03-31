@@ -13,6 +13,7 @@ object RandomWalk {
 
   private val boxSize = 1.0
   private val cycleDuration = 5
+  private val displacementPrecision = 0.001
 
   private val halfBoxSize = boxSize / 2
 
@@ -48,7 +49,7 @@ object RandomWalk {
         trueTrajectory.updatePosition(delta)
 
         periodicTrajectory.updatePosition(delta)
-        perodizeVector(periodicTrajectory.position)
+        periodicTrajectory.periodize()
 
         updateLineGeo(deltaLine, 1, trueTrajectory.position)
       })
@@ -78,9 +79,8 @@ object RandomWalk {
 
       advancePosition()
 
-      val precision = 0.001
       val displacement = js.Dynamic.global.Math.floor(
-        trueTrajectory.position.length() / precision)
+        trueTrajectory.position.length() / displacementPrecision)
       dom.document.getElementById("info").innerHTML =
         "Step: " + index + " Displacement: " + displacement
 
@@ -102,7 +102,6 @@ object RandomWalk {
 
   /** Visualization utilities
     */
-
   private def createSimulationCube = {
     val cube = THREE.LineSegments(
       THREE.EdgesGeometry(THREE.BoxGeometry(boxSize, boxSize, boxSize)),
@@ -136,16 +135,17 @@ object RandomWalk {
   /** Represents the path taken by a particle, including it's history,
     * for visualization
     */
-
   case class Trajectory(tracerColor: js.Any,
                         segmentColor: js.Any,
                         initialPosition: Vector3 = zeroVector,
                         maxSegments: Int = 10 * 1000) {
 
-    val position: Vector3 = Vector3.clone(initialPosition)
-    private val tracer = createTracerSphere(tracerColor, position)
+    private var innerPosition: Vector3 = Vector3.clone(initialPosition)
+    private val tracer = createTracerSphere(tracerColor, innerPosition)
     private val segment = createLineGeo(maxSegments, segmentColor)
     private var currentSegmentIndex = 0
+
+    def position: Vector3 = Vector3.clone(innerPosition)
 
     def addToScene(scene: THREE.Scene): Unit = {
       scene.add(tracer)
@@ -153,18 +153,21 @@ object RandomWalk {
     }
 
     def updatePosition(delta: Vector3): Unit = {
-      position.add(delta)
-      tracer.position.copy(position)
+      innerPosition.add(delta)
+      tracer.position.copy(innerPosition)
       currentSegmentIndex += 1
       if (currentSegmentIndex < maxSegments) {
-        updateLineGeo(segment, currentSegmentIndex, position)
+        updateLineGeo(segment, currentSegmentIndex, innerPosition)
       }
+    }
+
+    def periodize(): Unit = {
+      innerPosition = RandomWalk.periodize(innerPosition)
     }
   }
 
   /** Random number utilities
     */
-
   def randomOffset: Double = 0.05 * boxSize *
     (js.Dynamic.global.Math.random().asInstanceOf[Double] - 0.5)
 
@@ -172,7 +175,6 @@ object RandomWalk {
 
   /** Periodic box utilities
     */
-
   def periodize(a: Double): Double = {
     if (a < -halfBoxSize) {
       a + boxSize
@@ -183,16 +185,13 @@ object RandomWalk {
     }
   }
 
-  def perodizeVector(v: Vector3): Unit = {
-    v.x = periodize(v.x)
-    v.y = periodize(v.y)
-    v.z = periodize(v.z)
+  def periodize(v: Vector3): Vector3 = {
+    Vector3(periodize(v.x), periodize(v.y), periodize(v.z))
   }
 
   /** Definitions of the plot
     * mainly just a lot of JavaScript literals for interpretation by plotly
     */
-
   private val tracePoints = literal(
     x = js.Array(0),
     y = js.Array(0),
