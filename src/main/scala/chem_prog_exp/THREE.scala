@@ -8,9 +8,9 @@ object THREE {
 
   @js.native
   trait Vector3 extends js.Object {
-    var x: js.JSNumberOps
-    var y: js.JSNumberOps
-    var z: js.JSNumberOps
+    var x: Double
+    var y: Double
+    var z: Double
 
     def copy(v: Vector3): Unit
 
@@ -18,20 +18,15 @@ object THREE {
   }
 
   object Vector3 {
-    def apply(x: js.JSNumberOps, y: js.JSNumberOps, z: js.JSNumberOps): Vector3 =
+    def apply(x: Double, y: Double, z: Double): Vector3 =
       js.Dynamic.newInstance(js.Dynamic.global.THREE.Vector3)(x, y, z).asInstanceOf[Vector3]
 
-    def apply(x: js.JSNumberOps): Vector3 = apply(x, x, x)
+    def apply(x: Double): Vector3 = apply(x, x, x)
 
-    def unapply(v: Vector3): Option[(js.JSNumberOps, js.JSNumberOps, js.JSNumberOps)] =
+    def unapply(v: Vector3): Option[(Double, Double, Double)] =
       Some((v.x, v.y, v.z))
 
     def clone(v: Vector3) = Vector3(v.x, v.y, v.z)
-  }
-
-  @js.native
-  trait SceneObject extends js.Object {
-    var position: Vector3
   }
 
   @js.native
@@ -80,16 +75,28 @@ object THREE {
   }
 
   @js.native
-  trait Geometry extends js.Object
+  trait Geometry extends js.Object{
+    val vertices: js.Array[Vector3]
+    var verticesNeedUpdate: Boolean
+  }
+
+  object Geometry {
+    def apply(): Geometry =
+      js.Dynamic.newInstance(js.Dynamic.global.THREE.Geometry)().asInstanceOf[Geometry]
+  }
 
   @js.native
   trait BoxGeometry extends Geometry
 
   object BoxGeometry {
-    def apply(x: Double, y: Double, z: Double): BoxGeometry =
+    def apply(x: Double, y: Double, z: Double): BoxGeometry = {
+      assert(x > 0)
+      assert(y > 0)
+      assert(z > 0)
       js.Dynamic.newInstance(js.Dynamic.global.THREE.BoxGeometry)(
         x, y, z
       ).asInstanceOf[BoxGeometry]
+    }
   }
 
   @js.native
@@ -137,6 +144,22 @@ object THREE {
       js.Dynamic.newInstance(js.Dynamic.global.THREE.MeshBasicMaterial)(
         attrs
       ).asInstanceOf[MeshBasicMaterial]
+  }
+
+  @js.native
+  trait SceneObject extends js.Object {
+    var position: Vector3
+    var geometry: Geometry
+  }
+
+  @js.native
+  trait Line extends SceneObject
+
+  object Line {
+    def apply(geometry: Geometry, material: Material): Line =
+      js.Dynamic.newInstance(js.Dynamic.global.THREE.Line)(
+        geometry, material
+      ).asInstanceOf[Line]
   }
 
   @js.native
