@@ -15,11 +15,19 @@ object THREE {
     val y: Double
     val z: Double
 
+    def set(x: Double, y: Double, z: Double): Unit
+
     def copy(v: Vector3): Unit
 
     def add(v: Vector3): Unit
 
+    def multiplyScalar(s: Double): Unit
+
+    def clampLength(min: Double, max: Double): Unit
+
     def length(): Double
+
+    def dot(v: Vector3): Double
   }
 
   object Vector3 {
@@ -45,6 +53,42 @@ object THREE {
   }
 
   @js.native
+  trait Light extends SceneObject
+
+  @js.native
+  trait AmbientLight extends Light
+
+  object AmbientLight {
+    def apply(color: js.Any, intensity: Double = 1): AmbientLight =
+      js.Dynamic.newInstance(js.Dynamic.global.THREE.AmbientLight)(
+        color, intensity
+      ).asInstanceOf[AmbientLight]
+  }
+
+  @js.native
+  trait DirectionalLight extends Light
+
+  object DirectionalLight {
+    def apply(color: js.Any, intensity: Double = 1): DirectionalLight =
+      js.Dynamic.newInstance(js.Dynamic.global.THREE.DirectionalLight)(
+        color, intensity
+      ).asInstanceOf[DirectionalLight]
+  }
+
+  @js.native
+  trait PointLight extends Light
+
+  object PointLight {
+    def apply(color: Int = 0xffffff,
+              intensity: Double = 1,
+              distance: Double = 0,
+              decay: Double = 1): PointLight =
+      js.Dynamic.newInstance(js.Dynamic.global.THREE.DirectionalLight)(
+        color, intensity, distance, decay
+      ).asInstanceOf[PointLight]
+  }
+
+  @js.native
   trait Camera extends js.Object {
     val target: Vector3
   }
@@ -55,10 +99,10 @@ object THREE {
   }
 
   object PerspectiveCamera {
-    def apply(fov: js.JSNumberOps,
-              aspect: js.JSNumberOps,
-              near: js.JSNumberOps,
-              far: js.JSNumberOps): PerspectiveCamera =
+    def apply(fov: Double,
+              aspect: Double,
+              near: Double,
+              far: Double): PerspectiveCamera =
       js.Dynamic.newInstance(js.Dynamic.global.THREE.PerspectiveCamera)(
         fov, aspect, near, far
       ).asInstanceOf[PerspectiveCamera]
@@ -153,6 +197,26 @@ object THREE {
       js.Dynamic.newInstance(js.Dynamic.global.THREE.MeshBasicMaterial)(
         attrs
       ).asInstanceOf[MeshBasicMaterial]
+  }
+
+  @js.native
+  trait MeshLambertMaterial extends Material
+
+  object MeshLambertMaterial {
+    def apply(attrs: js.Object): MeshLambertMaterial =
+      js.Dynamic.newInstance(js.Dynamic.global.THREE.MeshLambertMaterial)(
+        attrs
+      ).asInstanceOf[MeshLambertMaterial]
+  }
+
+  @js.native
+  trait MeshPhongMaterial extends Material
+
+  object MeshPhongMaterial {
+    def apply(attrs: js.Object): MeshPhongMaterial =
+      js.Dynamic.newInstance(js.Dynamic.global.THREE.MeshPhongMaterial)(
+        attrs
+      ).asInstanceOf[MeshPhongMaterial]
   }
 
   @js.native
