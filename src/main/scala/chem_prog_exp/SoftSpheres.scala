@@ -1,6 +1,6 @@
 package chem_prog_exp
 
-import chem_prog_exp.THREE.{LineBasicMaterial, Vector3}
+import chem_prog_exp.THREE.Vector3
 import org.scalajs.dom
 
 import scala.collection.mutable
@@ -18,8 +18,8 @@ object SoftSpheres {
 
   private val cycleDuration = 1
 
-  private val sigma = 4 * particleRadius
-  private val epsilon = 0.000001
+  private val sigma = 2 * particleRadius
+  private val epsilon = 0.00002
   private val sigmaSqr = sigma * sigma
   private val LJFactor = -4 * 6 * epsilon
   private val rCutoff = 2.5 * sigma
@@ -27,8 +27,16 @@ object SoftSpheres {
 
   private val randomScale = 0.5 * particleRadius
   private val alpha = 1.0
-  private val maxForce = 0.01 * particleRadius
+  private val maxForce = 0.1 * particleRadius
 
+  private val densityDistPrecision = 0.1 * particleRadius
+  private val densityDistMax = boxSize / 2
+  private val pairDistanceCount =
+    (0 to (densityDistMax / densityDistPrecision).toInt)
+      .map(_ => 0)
+      .toArray
+  private val plotDistances: Set[Int] = Set(
+    1, 10, 50, 100, 250, 500, 1000, 1500, 2000)
 
   private val boxColor = "green"
   private val particleColor = "orange"
@@ -36,6 +44,29 @@ object SoftSpheres {
   private val halfBoxSize = boxSize / 2
 
   private val zeroVector = Vector3(0)
+
+  private var densityTraces: List[js.Object] = Nil
+
+  /** Definitions of the plot
+    * mainly just a lot of JavaScript literals for interpretation by plotly
+    */
+
+  private val fontFamily = "Courier New, monospace"
+
+  private val plotLayout = literal(
+    height = 300,
+    title = literal(
+      text = "Reduced Pair Density Distribution, g(r)",
+      font = literal(
+        family = fontFamily,
+        size = 18
+      ),
+      xref = "paper",
+      x = 0.05
+    ),
+    xaxis = axis("Pair Distance, r, (Particle Radius)"),
+    yaxis = axis("g(r)")
+  )
 
   @JSExport
   def run(): Unit = {
@@ -64,9 +95,10 @@ object SoftSpheres {
       println("update")
 
       (1 to cycleDuration).foreach(_ => {
-        Particle.evaluateForce(particles)
+        evaluateForce(particles)
         particles.foreach(_.update())
       })
+      countPairDistances(particles)
     }
 
     // re-draw the plot
@@ -74,19 +106,15 @@ object SoftSpheres {
     // can't seem to get that to work and see tickets about the issue
     // instead, I'm stupidly re-drawing the full plot each time, which is expensive
     def plot(): Unit = {
-      /*
-    js.Dynamic.global.Plotly.newPlot(
-      "plot",
-      js.Array(tracePoints, traceLine),
-      plotLayout,
-      literal(showSendToCloud = false)
-    )
-    */
+      js.Dynamic.global.Plotly.newPlot(
+        "plot",
+        js.Array(densityTraces: _*),
+        plotLayout,
+        literal(showSendToCloud = false)
+      )
     }
 
-    plot()
-
-    var index = 0
+    var steps: Int = 0
 
     // animation loop function. called every time we update the visualization
     def animate(): Unit = {
@@ -95,12 +123,15 @@ object SoftSpheres {
 
       advancePosition()
 
+      steps += 1
+
       dom.document.getElementById("info").innerHTML =
-        "Step: " + index
+        "Step: " + steps
 
-      index += 1
-
-      if (index % 25 == 0) {
+      //val stepsBase5 = log(steps) / log(5)
+      // if (stepsBase5 - floor(stepsBase5) < 1e-6) {
+      if (plotDistances.contains(steps)) {
+        densityTraces = createPairDensityTrace(steps, "Steps: " + steps) :: densityTraces
         plot()
       }
     }
@@ -134,56 +165,103 @@ object SoftSpheres {
     }
   }
 
-  object Particle {
+  def evaluateForce(particles: Array[Particle]): Unit = {
+    particles.foreach(_.zeroForce())
 
-    def evaluateForce(particles: Array[Particle]): Unit = {
-      particles.foreach(_.zeroForce())
-
-      for (i <- particles.indices) {
-        val positionI = particles(i).position
-        for (j <- i + 1 until particles.length) {
-          evaluatePairForces(positionI, particles(j).position) match {
-            case None =>
-            case Some((fi, fj)) =>
-              particles(i).addForce(fi)
-              particles(j).addForce(fj)
-          }
+    for (i <- particles.indices) {
+      val positionI = particles(i).position
+      for (j <- i + 1 until particles.length) {
+        evaluatePairForces(positionI, particles(j).position) match {
+          case None =>
+          case Some((fi, fj)) =>
+            particles(i).addForce(fi)
+            particles(j).addForce(fj)
         }
       }
     }
+  }
 
-    def evaluatePairForces(va: Vector3, vb: Vector3): Option[(Vector3, Vector3)] = {
-      def periodizeOne(a: Double, b: Double): Double = {
-        val l = b - a
-        if (l > halfBoxSize) l - boxSize
-        else if (l < -halfBoxSize) l + boxSize
-        else l
-      }
+  def evaluatePairForces(va: Vector3, vb: Vector3): Option[(Vector3, Vector3)] = {
+    val rij: Vector3 = evaluatePairVector(va, vb)
 
-      val rij = Vector3(periodizeOne(va.x, vb.x), periodizeOne(va.y, vb.y), periodizeOne(va.z, vb.z))
+    val rsqr = rij.dot(rij)
+    if (rsqr > rCutoffSqr) None
+    else {
+      // calculate the scalar force
+      // scale it by 1/r such that it includes the normalization term to
+      // make the separation vector a unit vector as needed to calculate
+      // components of the force vector
+      val invRSqr = 1.0 / rsqr
+      val x2 = sigmaSqr * invRSqr
+      val x6 = x2 * x2 * x2
+      val scaledForce = LJFactor * invRSqr * (2 * x6 * x6 - x6)
+      //println("rsqr " + sqrt(rsqr) / particleRadius + " force " + scaledForce)
 
-      val rsqr = rij.dot(rij)
-      if (rsqr > rCutoffSqr) None
-      else {
-        // calculate the scalar force
-        // scale it by 1/r such that it includes the normalization term to
-        // make the separation vector a unit vector as needed to calculate
-        // components of the force vector
-        val invRSqr = 1.0 / rsqr
-        val x2 = sigmaSqr * invRSqr
-        val x6 = x2 * x2 * x2
-        val scaledForce = LJFactor * invRSqr * (2 * x6 * x6 - x6)
-        //println("rsqr " + sqrt(rsqr) / particleRadius + " force " + scaledForce)
+      val forceA = Vector3.clone(rij)
+      forceA.multiplyScalar(scaledForce)
+      forceA.clampLength(0, maxForce)
+      val forceB = Vector3.clone(rij)
+      forceB.multiplyScalar(-scaledForce)
+      forceB.clampLength(0, maxForce)
+      Some((forceA, forceB))
+    }
+  }
 
-        val forceA = Vector3.clone(rij)
-        forceA.multiplyScalar(scaledForce)
-        forceA.clampLength(0, maxForce)
-        val forceB = Vector3.clone(rij)
-        forceB.multiplyScalar(-scaledForce)
-        forceB.clampLength(0, maxForce)
-        Some((forceA, forceB))
+  private def evaluatePairVector(va: Vector3, vb: Vector3) = {
+    def periodizeOne(a: Double, b: Double): Double = {
+      val l = b - a
+      if (l > halfBoxSize) l - boxSize
+      else if (l < -halfBoxSize) l + boxSize
+      else l
+    }
+
+    Vector3(periodizeOne(va.x, vb.x), periodizeOne(va.y, vb.y), periodizeOne(va.z, vb.z))
+  }
+
+  def countPairDistances(particles: Array[Particle]): Unit = {
+    for (i <- particles.indices) {
+      val positionI = particles(i).position
+      for (j <- i + 1 until particles.length) {
+        val rij = evaluatePairVector(positionI, particles(j).position)
+        val r = rij.length()
+        if (r < densityDistMax) {
+          pairDistanceCount((r / densityDistPrecision).toInt) += 1
+        }
       }
     }
+  }
+
+  def createPairDensityTrace(steps: Int, title: String): js.Object = {
+    val volumeFactor = 4.0 / 3.0 * 3.1415
+
+    def shellDensity(index: Int): Double = {
+      val r = index * densityDistPrecision
+      volumeFactor * r * r * r
+    }
+
+    val N = pairDistanceCount.sum
+    val V = volumeFactor * densityDistMax * densityDistMax * densityDistMax
+    val bulkDensity = N / V
+
+    val reducedDensity = pairDistanceCount.indices.map(i => {
+      val count = pairDistanceCount(i)
+      val volume = shellDensity(i + 1) - shellDensity(i)
+      count / volume / bulkDensity
+    })
+
+    val r = reducedDensity.indices.map(_ * densityDistPrecision / particleRadius)
+    literal(
+      x = js.Array(r: _*),
+      y = js.Array(reducedDensity: _*),
+      name = title,
+      `type` = "Scatter",
+      mode = "line",
+      line = literal(
+        shape = "spline",
+        //color = "rgb(255,127,80)",
+        width = 2
+      )
+    )
   }
 
 
@@ -211,6 +289,12 @@ object SoftSpheres {
 
   private def sqrt(x: Double) =
     js.Dynamic.global.Math.sqrt(x).asInstanceOf[Double]
+
+  private def log(x: Double) =
+    js.Dynamic.global.Math.log(x).asInstanceOf[Double]
+
+  private def floor(x: Double) =
+    js.Dynamic.global.Math.floor(x).asInstanceOf[Double]
 
   /** Random number utilities
     */
@@ -241,51 +325,6 @@ object SoftSpheres {
   def periodize(v: Vector3): Vector3 = {
     Vector3(periodize(v.x), periodize(v.y), periodize(v.z))
   }
-
-  /** Definitions of the plot
-    * mainly just a lot of JavaScript literals for interpretation by plotly
-    */
-  private val tracePoints = literal(
-    x = js.Array(0),
-    y = js.Array(0),
-    name = "Points",
-    `type` = "Scatter",
-    mode = "markers",
-    marker = literal(
-      color = "rgb(164, 194, 244)",
-      size = 5
-    )
-  )
-
-  private val traceLine = literal(
-    x = js.Array(0),
-    y = js.Array(0),
-    name = "Smoothed",
-    `type` = "Scatter",
-    mode = "line",
-    line = literal(
-      shape = "spline",
-      color = "rgb(255,127,80)",
-      width = 3
-    )
-  )
-
-  private val fontFamily = "Courier New, monospace"
-
-  private val plotLayout = literal(
-    height = 300,
-    title = literal(
-      text = "Root Mean Square Displacement of Tracer",
-      font = literal(
-        family = fontFamily,
-        size = 18
-      ),
-      xref = "paper",
-      x = 0.05
-    ),
-    xaxis = axis("Time, t (steps)"),
-    yaxis = axis("RMS Displacement")
-  )
 
   private def axis(text: String) = {
     literal(
