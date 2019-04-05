@@ -13,9 +13,27 @@
     <style>
         body { margin: 0; }
         canvas { width: 100%; height: 100% }
-        div#info { padding: 10px;}
-        div#explain { padding: 10px;}
-        div#render { padding: 10px;}
+
+        div#explain {
+            padding: 10px;
+        }
+
+        div#render {
+            padding: 10px;
+            float: left;
+            width: 550px;
+        }
+
+        div#controls {
+            padding: 10px;
+            float: left;
+            width: 400px;
+            border: 1px solid black;
+        }
+
+        div#clear {
+            clear: both;
+        }
 
         .footer {
           text-align: center;
@@ -44,9 +62,15 @@
         <strong>Work in Progress.</strong>
         Explanation TBD...
    </div>
-    <div id="render"></div>
-    <div id="info">Info</div>
-    <div id="plot"></div>
+    <div>
+        <div id="render"></div>
+        <div id="controls">
+            <div id="info"></div>
+            <button id="start_stop">Stop</button>
+        </div>
+        <div id="clear"></div>
+        <div id="plot"></div>
+    </div>
 
     <footer class="footer">
     <span class="footer-copyright text-center py-3">

@@ -2,6 +2,7 @@ package chem_prog_exp
 
 import chem_prog_exp.THREE.Vector3
 import org.scalajs.dom
+import org.scalajs.dom.html.Button
 
 import scala.collection.mutable
 import scala.scalajs.js
@@ -115,9 +116,12 @@ object SoftSpheres {
     }
 
     var steps: Int = 0
+    var running = true
 
     // animation loop function. called every time we update the visualization
     def animate(): Unit = {
+      if (!running) return
+
       js.Dynamic.global.requestAnimationFrame(() => animate())
       renderer.render(scene, camera)
 
@@ -137,6 +141,21 @@ object SoftSpheres {
     }
 
     animate() // start the animation loop
+
+
+    val startStop = dom.document.getElementById("start_stop")
+    startStop
+      .asInstanceOf[Button]
+      .onclick = event => {
+      if (running) {
+        startStop.innerHTML = "Start"
+        running = false
+      } else {
+        startStop.innerHTML = "Stop"
+        running = true
+        animate()
+      }
+    }
   }
 
   case class Particle(position: Vector3) {
