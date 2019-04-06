@@ -21,9 +21,11 @@ object SoftSpheres {
 
   private val sigma = 2 * particleRadius
   private val epsilon = 0.00002
+  private val rCutoff = 2.5 * sigma
+  private val rNeighbor = rCutoff + particleRadius
+
   private val sigmaSqr = sigma * sigma
   private val LJFactor = -4 * 6 * epsilon
-  private val rCutoff = 2.5 * sigma
   private val rCutoffSqr = rCutoff * rCutoff
 
   private val randomScale = 0.5 * particleRadius
@@ -36,6 +38,7 @@ object SoftSpheres {
     (0 to (densityDistMax / densityDistPrecision).toInt)
       .map(_ => 0)
       .toArray
+
   private val plotDistances: Set[Int] = Set(
     1, 10, 50, 100, 250, 500, 1000, 1500, 2000)
 
@@ -95,8 +98,9 @@ object SoftSpheres {
     def advancePosition(): Unit = {
       println("update")
 
+      val neighbors = buildNeighbors(particles)
       (1 to cycleDuration).foreach(_ => {
-        evaluateForce(particles)
+        evaluateForces(particles, neighbors)
         particles.foreach(_.update())
       })
       countPairDistances(particles)
@@ -160,7 +164,6 @@ object SoftSpheres {
 
   case class Particle(position: Vector3) {
     private val sphere = createSphere(particleColor, position)
-    private val neighbors: List[Particle] = Nil
     private val instantaneousForce = Vector3(0)
 
     def addToScene(scene: THREE.Scene): Unit = scene.add(sphere)
@@ -170,32 +173,50 @@ object SoftSpheres {
     def addForce(force: Vector3): Unit = instantaneousForce.add(force)
 
     def update(): Unit = {
-      //println("instance force", instantaneousForce.length())
       val displacement = Vector3.clone(instantaneousForce)
       displacement.multiplyScalar(alpha)
       displacement.add(randomPerturbation)
-      //println("displacement", displacement.length())
 
       position.add(displacement)
       position.copy(periodize(position))
-      //println("position " + position.x + "," + position.y + "," + position.z)
 
       sphere.position.copy(position)
     }
   }
 
-  def evaluateForce(particles: Array[Particle]): Unit = {
-    particles.foreach(_.zeroForce())
+  def buildNeighbors(particles: Array[Particle]): Array[(Particle, Particle)] = {
+    var neighbors: mutable.ArrayBuilder[(Particle, Particle)] =
+      new mutable.ArrayBuilder.ofRef[(Particle, Particle)]()
+
+    val rNeighborSqr = rNeighbor * rNeighbor
 
     for (i <- particles.indices) {
-      val positionI = particles(i).position
+      val particleI = particles(i)
+      val positionI = particleI.position
       for (j <- i + 1 until particles.length) {
-        evaluatePairForces(positionI, particles(j).position) match {
-          case None =>
-          case Some((fi, fj)) =>
-            particles(i).addForce(fi)
-            particles(j).addForce(fj)
+        val particleJ = particles(j)
+        if (periodicDistanceSqr(positionI, particleJ.position) <=
+          rNeighborSqr) {
+          neighbors += ((particleI, particleJ))
         }
+      }
+    }
+    neighbors.result()
+  }
+
+
+  def evaluateForces(particles: Array[Particle],
+                     neighbors: Array[(Particle, Particle)]): Unit = {
+    particles.foreach(_.zeroForce())
+
+    for (t <- neighbors) {
+      val pI = t._1
+      val pJ = t._2
+      evaluatePairForces(pI.position, pJ.position) match {
+        case None =>
+        case Some((fi, fj)) =>
+          pI.addForce(fi)
+          pJ.addForce(fj)
       }
     }
   }
@@ -224,17 +245,6 @@ object SoftSpheres {
       forceB.clampLength(0, maxForce)
       Some((forceA, forceB))
     }
-  }
-
-  private def evaluatePairVector(va: Vector3, vb: Vector3) = {
-    def periodizeOne(a: Double, b: Double): Double = {
-      val l = b - a
-      if (l > halfBoxSize) l - boxSize
-      else if (l < -halfBoxSize) l + boxSize
-      else l
-    }
-
-    Vector3(periodizeOne(va.x, vb.x), periodizeOne(va.y, vb.y), periodizeOne(va.z, vb.z))
   }
 
   def countPairDistances(particles: Array[Particle]): Unit = {
@@ -283,9 +293,51 @@ object SoftSpheres {
     )
   }
 
+  @inline private final def periodizeOne(a: Double, b: Double): Double = {
+    val l = b - a
+    if (l > halfBoxSize) l - boxSize
+    else if (l < -halfBoxSize) l + boxSize
+    else l
+  }
 
-  case class NeighborListBuilder() {
-    private val grid: mutable.HashMap[(Int, Int), Particle] = mutable.HashMap.empty
+  @inline private final def evaluatePairVector(va: Vector3, vb: Vector3) = {
+    Vector3(periodizeOne(va.x, vb.x), periodizeOne(va.y, vb.y), periodizeOne(va.z, vb.z))
+  }
+
+  @inline private final def periodicDistanceSqr(va: Vector3, vb: Vector3): Double = {
+    @inline def sqr(x: Double) = x * x
+
+    sqr(periodizeOne(va.x, vb.x)) +
+      sqr(periodizeOne(va.y, vb.y)) +
+      sqr(periodizeOne(va.z, vb.z))
+  }
+
+
+  private def randomCoordinate = boxSize * JsMath.uniformRandom
+
+  private def randomCoordinateVector =
+    Vector3(randomCoordinate, randomCoordinate, randomCoordinate)
+
+  @inline private final def randomOffset: Double =
+    randomScale * (JsMath.uniformRandom - 0.5)
+
+  @inline private final def randomPerturbation: Vector3 =
+    Vector3(randomOffset, randomOffset, randomOffset)
+
+  /** Periodic box utilities
+    */
+  @inline private final def periodize(a: Double): Double = {
+    if (a < -halfBoxSize) {
+      periodize(a + boxSize)
+    } else if (a > halfBoxSize) {
+      periodize(a - boxSize)
+    } else {
+      a
+    }
+  }
+
+  @inline private final def periodize(v: Vector3): Vector3 = {
+    Vector3(periodize(v.x), periodize(v.y), periodize(v.z))
   }
 
   /** Visualization utilities
@@ -306,44 +358,6 @@ object SoftSpheres {
     sphere
   }
 
-  private def sqrt(x: Double) =
-    js.Dynamic.global.Math.sqrt(x).asInstanceOf[Double]
-
-  private def log(x: Double) =
-    js.Dynamic.global.Math.log(x).asInstanceOf[Double]
-
-  private def floor(x: Double) =
-    js.Dynamic.global.Math.floor(x).asInstanceOf[Double]
-
-  /** Random number utilities
-    */
-  private def uniformRandom =
-    js.Dynamic.global.Math.random().asInstanceOf[Double]
-
-  private def randomCoordinate = boxSize * uniformRandom
-
-  private def randomCoordinateVector =
-    Vector3(randomCoordinate, randomCoordinate, randomCoordinate)
-
-  private def randomOffset: Double = randomScale * (uniformRandom - 0.5)
-
-  private def randomPerturbation: Vector3 = Vector3(randomOffset, randomOffset, randomOffset)
-
-  /** Periodic box utilities
-    */
-  def periodize(a: Double): Double = {
-    if (a < -halfBoxSize) {
-      periodize(a + boxSize)
-    } else if (a > halfBoxSize) {
-      periodize(a - boxSize)
-    } else {
-      a
-    }
-  }
-
-  def periodize(v: Vector3): Vector3 = {
-    Vector3(periodize(v.x), periodize(v.y), periodize(v.z))
-  }
 
   private def axis(text: String) = {
     literal(
