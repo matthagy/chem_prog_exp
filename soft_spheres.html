@@ -22,17 +22,30 @@
             padding: 10px;
             float: left;
             width: 550px;
+            height: 550px;
+            border: 1px solid lightgray;
         }
 
         div#controls {
             padding: 10px;
             float: left;
-            width: 400px;
-            border: 1px solid black;
+            width: 450px;
+            border: 1px solid lightgray;
         }
 
         div#clear {
             clear: both;
+        }
+
+        .ace_editor {
+            border: 1px solid lightgray;
+            margin: 10px;
+            height: 400px;
+            width: 400px;
+        }
+        .scrollmargin {
+            height: 80px;
+            text-align: center;
         }
 
         .footer {
@@ -63,11 +76,27 @@
         Explanation TBD...
    </div>
     <div>
-        <div id="render"></div>
         <div id="controls">
-            <div id="info"></div>
-            <button id="start_stop">Stop</button>
+
+            <div id="info">Steps: 0</div>
+            <button id="start_stop">Start</button>
+
+            <div id="editor">
+var r = 0.05;
+SoftSpheres.run({
+    Nparticles: 1000,
+    particleRadius: r,
+    epsilon: 0.00002,
+    sigma: 2 * r,
+    randomScale: 0.5 * r,
+    cycleDuration: 50,
+    analysisRate: 10
+});
+</div>
         </div>
+
+        <div id="render"></div>
+
         <div id="clear"></div>
         <div id="plot"></div>
     </div>
@@ -100,8 +129,18 @@
 
 <script type="text/javascript" src="target/scala-2.12/chem_prog_exp-opt.js"></script>
 
+<script src="ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
 <script>
-    window.onload = function() { SoftSpheres.run(); }
+    editor = ace.edit("editor", {
+        wrap: true,
+        autoScrollEditorIntoView: true
+    });
+    editor.setTheme("ace/theme/monokai");
+    editor.session.setMode("ace/mode/javascript");
+</script>
+
+<script>
+    window.onload = function() { SoftSpheres.initialize(); }
 </script>
 
 </body>

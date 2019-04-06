@@ -13,31 +13,29 @@ import scala.scalajs.js.annotation._
 @JSExportTopLevel("SoftSpheres")
 object SoftSpheres {
 
-  private val boxSize = 1.0
-  private val particleRadius = 0.05 * boxSize
-  private val nParticles = 1000
+  private val boxSize: Double = 1.0
 
-  private val cycleDuration = 1
+  private var particleRadius: Double = 0
+  private var epsilon: Double = 0
+  private var sigma: Double = 0
 
-  private val sigma = 2 * particleRadius
-  private val epsilon = 0.00002
-  private val rCutoff = 2.5 * sigma
-  private val rNeighbor = rCutoff + particleRadius
+  private var rCutoff: Double = 0
+  private var rCutoffSqr: Double = 0
+  private var rNeighbor: Double = 0
 
-  private val sigmaSqr = sigma * sigma
-  private val LJFactor = -4 * 6 * epsilon
-  private val rCutoffSqr = rCutoff * rCutoff
+  private var sigmaSqr: Double = 0
+  private var LJFactor: Double = 0
 
-  private val randomScale = 0.5 * particleRadius
+  private var randomScale: Double = 0
   private val alpha = 1.0
-  private val maxForce = 0.1 * particleRadius
+  private val maxForce = 0.1 * 0.05
 
-  private val densityDistPrecision = 0.1 * particleRadius
-  private val densityDistMax = boxSize / 2
-  private val pairDistanceCount =
-    (0 to (densityDistMax / densityDistPrecision).toInt)
-      .map(_ => 0)
-      .toArray
+  private var cycleDuration: Int = 0
+  private var analysisRate: Int = 0
+
+  private val densityDistPrecision = 0.01
+  private val densityDistMax = boxSize / 3
+  private var pairDistanceCount: Array[Int] = null
 
   private val plotDistances: Set[Int] = Set(
     1, 10, 50, 100, 250, 500, 1000, 1500, 2000)
@@ -72,8 +70,52 @@ object SoftSpheres {
     yaxis = axis("g(r)")
   )
 
+  private var running: Boolean = false
+
+
   @JSExport
-  def run(): Unit = {
+  def initialize(): Unit = {
+    val startStop = dom.document.getElementById("start_stop")
+    startStop
+      .asInstanceOf[Button]
+      .onclick = event => {
+      if (running) {
+        startStop.innerHTML = "Start"
+        running = false
+      } else {
+        startStop.innerHTML = "Stop"
+        running = true
+
+        var editorValue = js.Dynamic.global.editor.getValue()
+        js.Dynamic.global.eval(editorValue)
+      }
+    }
+  }
+
+  @JSExport
+  def run(parameters: js.Dictionary[js.Object]): Unit = {
+    assert(running)
+
+    val nParticles = parameters.getOrElse("Nparticles", 1000).asInstanceOf[Int]
+    particleRadius = parameters.getOrElse("particleRadius", 0.05).asInstanceOf[Double]
+    epsilon = parameters.getOrElse("epsilon", 0.00002).asInstanceOf[Double]
+    sigma = parameters.getOrElse("sigma", 2 * particleRadius).asInstanceOf[Double]
+    randomScale = parameters.getOrElse("randomScale", 0.5 * particleRadius).asInstanceOf[Double]
+    cycleDuration = parameters.getOrElse("cycleDuration", 5).asInstanceOf[Int]
+    analysisRate = parameters.getOrElse("analysisRate", 5).asInstanceOf[Int]
+
+    sigmaSqr = sigma * sigma
+    LJFactor = -4 * 6 * epsilon
+
+    rCutoff = 2.5 * sigma
+    rCutoffSqr = rCutoff * rCutoff
+    rNeighbor = rCutoff + 0.5
+
+    pairDistanceCount =
+      (0 to (densityDistMax / densityDistPrecision).toInt)
+        .map(_ => 0)
+        .toArray
+
     val scene = THREE.Scene()
 
     scene.add(THREE.AmbientLight(0x404040)) // soft white light
@@ -87,23 +129,30 @@ object SoftSpheres {
 
     val renderer = THREE.WebGLRenderer()
     renderer.setSize(500, 500)
-    dom.document.getElementById("render").appendChild(renderer.domElement)
+
+    val renderDiv = dom.document.getElementById("render")
+    while (renderDiv.firstChild != null)
+      renderDiv.removeChild(renderDiv.firstChild)
+    renderDiv.appendChild(renderer.domElement)
 
     scene.add(createSimulationBox)
 
     val particles = (1 to nParticles).map(_ => Particle(randomCoordinateVector)).toArray
     particles.foreach(_.addToScene(scene))
 
+    var steps: Int = 0
+    var neighbors = buildNeighbors(particles)
+
     // function to simulate the brownian propagation of the particle
     def advancePosition(): Unit = {
-      println("update")
+      if (steps % cycleDuration == 0)
+        neighbors = buildNeighbors(particles)
 
-      val neighbors = buildNeighbors(particles)
-      (1 to cycleDuration).foreach(_ => {
-        evaluateForces(particles, neighbors)
-        particles.foreach(_.update())
-      })
-      countPairDistances(particles)
+      evaluateForces(particles, neighbors)
+      particles.foreach(_.update())
+
+      if (steps % analysisRate == 0)
+        countPairDistances(particles)
     }
 
     // re-draw the plot
@@ -119,8 +168,7 @@ object SoftSpheres {
       )
     }
 
-    var steps: Int = 0
-    var running = true
+    densityTraces = Nil
 
     // animation loop function. called every time we update the visualization
     def animate(): Unit = {
@@ -147,19 +195,6 @@ object SoftSpheres {
     animate() // start the animation loop
 
 
-    val startStop = dom.document.getElementById("start_stop")
-    startStop
-      .asInstanceOf[Button]
-      .onclick = event => {
-      if (running) {
-        startStop.innerHTML = "Start"
-        running = false
-      } else {
-        startStop.innerHTML = "Stop"
-        running = true
-        animate()
-      }
-    }
   }
 
   case class Particle(position: Vector3) {
@@ -253,8 +288,9 @@ object SoftSpheres {
       for (j <- i + 1 until particles.length) {
         val rij = evaluatePairVector(positionI, particles(j).position)
         val r = rij.length()
-        if (r < densityDistMax) {
-          pairDistanceCount((r / densityDistPrecision).toInt) += 1
+        val index = (r / densityDistPrecision).toInt
+        if (index < pairDistanceCount.size) {
+          pairDistanceCount(index) += 1
         }
       }
     }
