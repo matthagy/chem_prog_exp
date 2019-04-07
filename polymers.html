@@ -5,10 +5,10 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-    <meta name="description" content="Polymer Simulation">
+    <meta name="description" content="Simple Polymer Simulation">
     <meta name="author" content="Matt Hagy <matthew.hagy@gmail.com>">
 
-    <title>Polymer Simulation</title>
+    <title>Simple Polymer Simulation</title>
 
     <style>
         body { margin: 0; }
@@ -70,10 +70,29 @@
 </head>
 
 <body>
-    <h2>Polymer Simulation</h2>
+    <h2>Simple Polymer Simulation</h2>
+    <i>...that runs in your browser</i>
     <div id="explain">
-        <strong>Work in Progress.</strong>
-        Explanation TBD...
+        This is a simple simulation of basic
+        <a href="https://en.wikipedia.org/wiki/Polymer">polymers</a>
+        ; i.e., molecular networks. In this mini-project, we simulate linear chains
+        of soft spheres. The interaction between spheres, both bonded and non-bonded
+        interactions are modeled with simplistic math and brownian dynamics is used
+        to update the sphere positions using random movement, directed by the interaction
+        terms.
+        <br/>
+        <br/>
+        See these related projects for more details on methodology.
+        <ul>
+            <li><a href="random_walk_scalajs.html">Random Walk in a Periodic Box</a></li>
+            <li><a href="soft_spheres.html">Soft Spheres Simulation</a></li>
+        </ul>
+        You can adjust the parameters of the simulation by changing the JavaScript code
+        below. Just hit the "Start" button to begin simulation. Note, the full simulation
+        runs within your web browser; nothing is done server side. At the bottom of this page,
+        we plot the progression of internal energy to track the relaxation/equilibration of
+        the simulated system.
+        <br/>
    </div>
     <div>
         <div id="controls">
@@ -87,12 +106,21 @@ Polymers.run({
     polymerLength: 8,
     NPolymers: 50,
     particleRadius: r,
+    // minimum energy length of bonds
     rBondZero: 3 * r,
+    // multiplicative factor of bond strength
     bondFactor: 0.1,
-    epsilon: 0.00003,
+     // LJ interaction strength
+    epsilon: 0.00002,
+    // LJ length scale
     sigma: 2 * r,
+    // BD update length scale
     randomScale: 0.5 * r,
+    // How frequently to update the neighbor lists in simulation
     cycleDuration: 50,
+    // How frequently to sample the internal engery
+    analysisRate: 10,
+    // How frequently the visulaization is updated
     visualizationRate: 10
 });
 </div>
