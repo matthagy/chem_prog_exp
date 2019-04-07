@@ -37,6 +37,7 @@ object Polymers {
   private val maxForce = 0.1 * 0.05
 
   private var cycleDuration: Int = 0
+  private var visualizationRate: Int = 0
 
   private val boxColor = "green"
   private val particleColor = "orange"
@@ -99,6 +100,8 @@ object Polymers {
       particles.foreach(_.update())
       polymers.foreach(_.resolveSpherePositions())
       polymers.foreach(_.updateGeo())
+
+      steps += 1
     }
 
     // animation loop function. called every time we update the visualization
@@ -108,9 +111,8 @@ object Polymers {
       js.Dynamic.global.requestAnimationFrame(() => animate())
       renderer.render(scene, camera)
 
-      advancePosition()
-
-      steps += 1
+      for (_ <- 0 until visualizationRate)
+        advancePosition()
 
       dom.document.getElementById("info").innerHTML =
         "Step: " + steps
@@ -162,6 +164,7 @@ object Polymers {
     randomScale = parameters.getOrElse("randomScale", 0.5 * particleRadius).asInstanceOf[Double]
 
     cycleDuration = parameters.getOrElse("cycleDuration", 5).asInstanceOf[Int]
+    visualizationRate = parameters.getOrElse("visualizationRate", 5).asInstanceOf[Int]
   }
 
   private def createPolymer(polymerLength: Int): Polymer = {
