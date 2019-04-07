@@ -72,8 +72,21 @@
 <body>
     <h2>Soft Spheres</h2>
     <div id="explain">
-        <strong>Work in Progress.</strong>
-        Explanation TBD...
+        This is a Brownian Dynamics simulation of soft spheres that interact with a
+        <a href="https://en.wikibooks.org/wiki/Molecular_Simulation/The_Lennard-Jones_Potential">
+        Lennard-Jones potential
+        </a>.
+        Just hit the "Start" button to begin the simulation, which runs in your browser.
+        <br/>
+        You can adjust the simulation parameters by changing the JavaScript code below. Chiefly, you
+        can experiment with the number of particles (and thereby the system density) and the interaction
+        strength (parameter `epsilon`).
+        You can also think of the interaction strength as being the inverse of temperature; i.e.,
+        a stronger interaction is consistent with a lower temperature.
+        <br/>
+        Within the simulation we compute the <a href="https://en.wikipedia.org/wiki/Radial_distribution_function">
+            radial pair density correlation function</a>, g(r).
+        You can see the plot of g(r) throughout time at the bottom of the page.
    </div>
     <div>
         <div id="controls">
