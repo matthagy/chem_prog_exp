@@ -98,14 +98,20 @@
             <button id="start_stop">Start</button>
 
             <div id="editor">
+// Note the box is a cube of length 1.0
 var r = 0.05;
 SoftSpheres.run({
     Nparticles: 1000,
     particleRadius: r,
+     // LJ interaction strength
     epsilon: 0.00002,
+    // LJ length scale
     sigma: 2 * r,
+    // BD update length scale
     randomScale: 0.5 * r,
+    // How frequently to update the neighbor lists in simulation
     cycleDuration: 50,
+    // How frequently to sample the pair density distribution
     analysisRate: 10
 });
 </div>
