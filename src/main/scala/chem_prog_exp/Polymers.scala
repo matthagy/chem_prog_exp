@@ -1,5 +1,6 @@
 package chem_prog_exp
 
+import chem_prog_exp.RandomWalk._
 import chem_prog_exp.THREE.{LineBasicMaterial, Vector3}
 import org.scalajs.dom
 import org.scalajs.dom.html.Button
@@ -37,17 +38,61 @@ object Polymers {
   private val maxForce = 0.1 * 0.05
 
   private var cycleDuration: Int = 0
+  private var analysisRate: Int = 0
   private var visualizationRate: Int = 0
 
   private val boxColor = "green"
   private val particleColor = "orange"
   private val bondColor = "blue"
 
-
   private val zeroVector = Vector3(0)
 
-
   private var running: Boolean = false
+
+  /** Definitions of the plot
+    * mainly just a lot of JavaScript literals for interpretation by plotly
+    */
+  private val tracePoints = literal(
+    x = js.Array(),
+    y = js.Array(),
+    name = "Points",
+    `type` = "Scatter",
+    mode = "markers",
+    marker = literal(
+      color = "rgb(164, 194, 244)",
+      size = 5
+    )
+  )
+
+  private val traceLine = literal(
+    x = js.Array(),
+    y = js.Array(),
+    name = "Smoothed",
+    `type` = "Scatter",
+    mode = "line",
+    line = literal(
+      shape = "spline",
+      color = "rgb(255,127,80)",
+      width = 3
+    )
+  )
+
+  private val fontFamily = "Courier New, monospace"
+
+  private val plotLayout = literal(
+    height = 300,
+    title = literal(
+      text = "Progression of Internal Energy, U(t)",
+      font = literal(
+        family = fontFamily,
+        size = 18
+      ),
+      xref = "paper",
+      x = 0.05
+    ),
+    xaxis = axis("Time, t (steps)"),
+    yaxis = axis("Internal Energy, U(t)")
+  )
 
 
   @JSExport
@@ -71,11 +116,14 @@ object Polymers {
 
   @JSExport
   def run(parameters: js.Dictionary[js.Object]): Unit = {
-    println("RUN: " + running)
 
     assert(running)
-    println("HERE")
     copyParameters(parameters)
+
+    tracePoints.x = js.Array()
+    tracePoints.y = js.Array()
+    traceLine.x = js.Array()
+    traceLine.y = js.Array()
 
     val (scene: THREE.Scene, renderer: THREE.WebGLRenderer, camera: THREE.PerspectiveCamera) =
       createScence()
@@ -95,6 +143,17 @@ object Polymers {
     def advancePosition(): Unit = {
       if (steps % cycleDuration == 0)
         neighbors = buildNeighbors(particles)
+
+      if (steps > 200 && steps % analysisRate == 0) {
+        val U = evaluateInternalEnergy(particles, bonds, neighbors)
+        tracePoints.x.push(steps)
+        tracePoints.y.push(U)
+        if (steps % (10 * analysisRate) == 0) {
+          traceLine.x.push(steps)
+          traceLine.y.push(U)
+        }
+        plot()
+      }
 
       evaluateForces(particles, bonds, neighbors)
       particles.foreach(_.update())
@@ -116,6 +175,8 @@ object Polymers {
 
       dom.document.getElementById("info").innerHTML =
         "Step: " + steps
+
+
     }
 
     animate() // start the animation loop
@@ -164,23 +225,23 @@ object Polymers {
     randomScale = parameters.getOrElse("randomScale", 0.5 * particleRadius).asInstanceOf[Double]
 
     cycleDuration = parameters.getOrElse("cycleDuration", 5).asInstanceOf[Int]
+    analysisRate = parameters.getOrElse("analysisRate", 10).asInstanceOf[Int]
     visualizationRate = parameters.getOrElse("visualizationRate", 5).asInstanceOf[Int]
   }
 
   private def createPolymer(polymerLength: Int): Polymer = {
     val startLocation = Vector3(randomCoordinate, -0.3, randomCoordinate)
-    val color = particleColor //s"rgb($rndColorComponent, $rndColorComponent, $rndColorComponent)"
+    //val color = s"rgb($rndColorComponent, $rndColorComponent, $rndColorComponent)"
     val particles = (0 until polymerLength).map(i =>
-      Particle(color, Vector3(startLocation.x, startLocation.y +  i * rBondZero, startLocation.z))
+      Particle(particleColor, Vector3(startLocation.x, startLocation.y + i * rBondZero, startLocation.z))
     ).toArray
-    Polymer(color, particles)
+    Polymer(particles)
   }
 
-  private def rndColorComponent: Int =
-    (256.0 * JsMath.uniformRandom).toInt
+  private def rndColorComponent: Int = (256.0 * JsMath.uniformRandom).toInt
 
-  case class Particle(color:String, position: Vector3) {
-    val sphere : THREE.Mesh = createSphere(color, position)
+  case class Particle(color: String, position: Vector3) {
+    val sphere: THREE.Mesh = createSphere(color, position)
     private val instantaneousForce = Vector3(0)
 
     def addToScene(scene: THREE.Scene): Unit = scene.add(sphere)
@@ -199,8 +260,8 @@ object Polymers {
     }
   }
 
-  case class Polymer(color:String, particles: Array[Particle]) {
-    private val lineGeo = createLineGeo(particles.length, color)
+  case class Polymer(particles: Array[Particle]) {
+    private val lineGeo = createLineGeo(particles.length, bondColor)
     updateGeo()
 
     def addToScene(scene: THREE.Scene): Unit = {
@@ -327,6 +388,29 @@ object Polymers {
     }
   }
 
+  def evaluateInternalEnergy(particles: Array[Particle],
+                     bonds: Array[(Particle, Particle)],
+                     neighbors: Array[(Particle, Particle)]): Double = {
+    var totalEnergy: Double = 0.0
+    for (t <- bonds) totalEnergy += evaluateBondEnergy(t._1.position, t._2.position)
+    for (t <- neighbors) totalEnergy += evaluatePairEnergy( t._1.position, t._2.position)
+    totalEnergy
+  }
+
+  def evaluateBondEnergy(va: Vector3, vb: Vector3): Double = {
+    0.5 * bondFactor * periodicDistanceSqr(va, vb)
+  }
+
+  def evaluatePairEnergy(va: Vector3, vb: Vector3): Double = {
+    val rsqr = periodicDistanceSqr(va, vb)
+    if (rsqr > rCutoffSqr) 0.0
+    else {
+      val sigma_r_2 = sigmaSqr / rsqr
+      val sigma_r_6 = sigma_r_2 * sigma_r_2 * sigma_r_2
+      4 * epsilon * (sigma_r_6 * sigma_r_6 - sigma_r_6)
+    }
+  }
+
 
   @inline private final def periodizeOne(a: Double, b: Double): Double = {
     val l = b - a
@@ -399,6 +483,35 @@ object Polymers {
     THREE.Line(
       lineGeo,
       LineBasicMaterial(literal(color = color)),
+    )
+  }
+
+  /** Plotting utilities
+    */
+
+  // re-draw the plot
+  // note we should be using the method that only updates the plot, but I
+  // can't seem to get that to work and see tickets about the issue
+  // instead, I'm stupidly re-drawing the full plot each time, which is expensive
+  def plot(): Unit = {
+    js.Dynamic.global.Plotly.newPlot(
+      "plot",
+      js.Array(tracePoints, traceLine),
+      plotLayout,
+      literal(showSendToCloud = false)
+    )
+  }
+
+  private def axis(text: String) = {
+    literal(
+      title = literal(
+        text = text,
+        font = literal(
+          family = fontFamily,
+          size = 14,
+          color = "#7f7f7f"
+        )
+      )
     )
   }
 }
