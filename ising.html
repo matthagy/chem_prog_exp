@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="Ising Polymer Simulation">
+    <meta name="author" content="Matt Hagy <matthew.hagy@gmail.com>">
+
+    <title>Ising Model Simulation</title>
+
+    <style>
+        body { margin: 0; }
+        canvas { width: 100%; height: 100% }
+
+        div#explain {
+            padding: 10px;
+        }
+
+        canvas#canvas {
+            padding: 10px;
+            float: left;
+            width: 550px;
+            height: 550px;
+            border: 1px solid lightgray;
+        }
+
+
+        div#controls {
+            padding: 10px;
+            float: left;
+            width: 450px;
+            border: 1px solid lightgray;
+        }
+
+        div#clear {
+            clear: both;
+        }
+
+        .ace_editor {
+            border: 1px solid lightgray;
+            margin: 10px;
+            height: 400px;
+            width: 400px;
+        }
+        .scrollmargin {
+            height: 80px;
+            text-align: center;
+        }
+
+        .footer {
+          text-align: center;
+          width: 100%;
+          height: 50px; /* Set the fixed height of the footer here */
+          line-height: 50px; /* Vertically center the text there */
+          background-color: #f5f5f5;
+          font-size: 80%
+        }
+    </style>
+
+    <link rel="stylesheet"
+          href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+          integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu"
+          crossorigin="anonymous">
+
+    <!--
+    <link href="style.css" rel="stylesheet">
+    -->
+
+</head>
+
+<body>
+    <h2>Ising Model Simulation</h2>
+    <i>...that runs in your browser</i>
+    <div id="explain">
+        This is a 2D Monte Carlo simulation of the 
+        <a href="https://en.wikipedia.org/wiki/Ising_model">Ising Model</a>.
+        <br/>
+        You can adjust the parameters of the simulation by changing the JavaScript code
+        below. Just hit the "Start" button to begin simulation. Note, the full simulation
+        runs within your web browser; nothing is done server side.
+        <br/>
+   </div>
+    <div>
+        <div id="controls">
+
+            <div id="info">Steps: 0</div>
+            <button id="start_stop">Start</button>
+            <div id="editor">
+Ising.run({
+    // size of the simulation
+    lateralSize: 100,
+    // pair interaction parameter (J, in kT),
+    pairInteraction: 3.0,
+    // external magnetic field (h, in kT),
+    externalField: 0.0,
+    // How frequently the visulaization is updated
+    visualizationRate: 100
+});
+</div>
+        </div>
+
+        <canvas id="canvas" width="1000" height="1000"></canvas>
+
+        <div id="clear"></div>
+        <div id="plot"></div>
+    </div>
+
+    <footer class="footer">
+    <span class="footer-copyright text-center py-3">
+        © 2019 Matt Hagy.
+        Powered by
+        <a href="https://www.scala-js.org">Scala.js</a>,
+        <a href="https://ace.c9.io/">Ace</a>,
+        <a href="https://plot.ly/">plotly</a>,
+        and
+        <a href="https://aws.amazon.com/cloudfront">AWS CloudFront</a>
+    </span>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.min.js"></script>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+<script src="https://code.jquery.com/jquery-1.12.4.min.js"
+        integrity="sha384-nvAa0+6Qg9clwYCGGPpDQLVpLNn0fRaROjHqs13t4Ggj3Ez50XnGQqc/r8MhnRDZ"
+        crossorigin="anonymous"></script>
+<script>window.jQuery || document.write('<script src="../../assets/js/vendor/jquery.min.js"><\/script>')</script>
+
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+
+<script type="text/javascript" src="target/scala-2.12/chem_prog_exp-opt.js"></script>
+
+<script src="ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+<script>
+    editor = ace.edit("editor", {
+        wrap: true,
+        autoScrollEditorIntoView: true
+    });
+    editor.setTheme("ace/theme/monokai");
+    editor.session.setMode("ace/mode/javascript");
+</script>
+
+<script>
+    window.onload = function() { Ising.initialize(); }
+</script>
+
+</body>
+</html>
