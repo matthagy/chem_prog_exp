@@ -62,6 +62,7 @@ object Ising {
     draw()
 
     var steps: Int = 0
+    var accepts: Int = 0
 
     // animation loop function. called every time we update the visualization
     def animate(): Unit = {
@@ -70,13 +71,15 @@ object Ising {
       js.Dynamic.global.requestAnimationFrame(() => animate())
 
       for (i <- 0 until visualizationRate) {
-        advanceSimulation()
+        if (advanceSimulation()) accepts += 1
         steps += 1
       }
       draw()
 
       dom.document.getElementById("info").innerHTML =
-        "Step: " + steps + " Net spin: " + spins.sum
+        "Step: " + steps +
+          " Net spin: " + spins.sum +
+          " Acc Rate: " + (JsMath.floor(100 * accepts / steps) / 100)
     }
 
     animate() // start the animation loop
@@ -99,7 +102,7 @@ object Ising {
     }
   }
 
-  def advanceSimulation(): Unit = {
+  def advanceSimulation(): Boolean = {
     val i = JsMath.randomRange(lateralSize)
     val j = JsMath.randomRange(lateralSize)
     val spin = spins(i * lateralSize + j)
@@ -108,16 +111,19 @@ object Ising {
       case -1 => 1
     }
 
-    val dSpin = newSpin - spin
-    var dU = -externalField * dSpin.toDouble
+    val dSpin = (newSpin - spin).toDouble
+    var dU = -externalField * dSpin
 
-    for (di <- Seq(-1, 1)) {
-      val ni = periodize(i + di)
-      for (dj <- Seq(-1, 1)) {
-        val nj = periodize(j + dj)
-        dU += -pairInteraction * spins(ni * lateralSize + nj) * dSpin
-      }
+    def pairEnergy(di: Int, dj: Int): Unit = {
+      val ni = if (di == 0) i else periodize(i + di)
+      val nj = if (dj == 0) j else periodize(j + dj)
+      dU += -pairInteraction * spins(ni * lateralSize + nj).toDouble * dSpin
     }
+
+    pairEnergy(0, 1)
+    pairEnergy(1, 0)
+    pairEnergy(0, -1)
+    pairEnergy(-1, 0)
 
     if (js.Dynamic.global.Number.isNaN(dU).asInstanceOf[Boolean]) {
       println("NAN DU")
@@ -128,11 +134,14 @@ object Ising {
     }
 
     //println("dU: " + dU)
+
     if (dU <= 0 || JsMath.exp(-dU) > JsMath.uniformRandom) {
       spins(i * lateralSize + j) = newSpin
       //println("accept")
+      true
     } else {
       //println("reject")
+      false
     }
   }
 
